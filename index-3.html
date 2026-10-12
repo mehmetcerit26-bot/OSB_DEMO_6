@@ -1,0 +1,1704 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>OSB DEPOKONTROL</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Rajdhani:wght@500;600;700&family=JetBrains+Mono:wght@400;500;700&display=swap');
+
+  :root{
+    --bg-0:#0a1220;
+    --bg-1:#101c2e;
+    --panel:#132437;
+    --line:#1e3a52;
+    --line-soft:#0f2035;
+    --cyan:#3fd7e0;
+    --cyan-dim:#1c5a63;
+    --amber:#e8a13a;
+    --green:#3fd17a;
+    --green-dim:#1c8f56;
+    --water-a:#0f6b8f;
+    --water-b:#3fd7e0;
+    --text:#d8e8f2;
+    --text-dim:#6f8ba3;
+    --text-faint:#425064;
+    --danger:#e0555f;
+    --danger-dim:#8f3a3f;
+  }
+
+  *{box-sizing:border-box;-webkit-tap-highlight-color:transparent;}
+  html,body{
+    margin:0; padding:0; min-height:100%;
+    background:
+      radial-gradient(1200px 600px at 15% -10%, #12293d 0%, transparent 60%),
+      var(--bg-0);
+    font-family:'Rajdhani', sans-serif;
+    color:var(--text);
+  }
+
+  .wrap{
+    max-width:1180px;
+    margin:0 auto;
+    padding:28px 24px 40px;
+  }
+
+  /* ── Header ── */
+  .hdr{
+    display:flex;
+    align-items:flex-end;
+    justify-content:space-between;
+    border-bottom:1px solid var(--line);
+    padding-bottom:16px;
+    margin-bottom:22px;
+    flex-wrap:wrap;
+    gap:10px;
+  }
+  .hdr-title{
+    font-family:'JetBrains Mono', monospace;
+    font-size:12px;
+    letter-spacing:.22em;
+    color:var(--cyan);
+    text-transform:uppercase;
+  }
+  .hdr h1{
+    margin:4px 0 0;
+    font-size:30px;
+    font-weight:700;
+    letter-spacing:.01em;
+    color:#eef6fb;
+  }
+  .hdr h1 span{ color:var(--text-dim); font-weight:500; }
+  .status{
+    display:flex; align-items:center; gap:8px;
+    font-family:'JetBrains Mono', monospace;
+    font-size:12px;
+    color:var(--text-dim);
+  }
+  .dot{
+    width:8px; height:8px; border-radius:50%;
+    background:var(--cyan);
+    box-shadow:0 0 0 0 rgba(63,215,224,.6);
+    animation:pulse 2s infinite;
+  }
+  .dot.off{ background:var(--danger); animation:none; }
+  .izleyici-rozet{
+    display:flex; align-items:center; gap:4px;
+    background:var(--line-soft); border:1px solid var(--line);
+    border-radius:20px; padding:3px 10px 3px 8px;
+    font-size:11px; color:var(--text);
+  }
+  .izleyici-rozet.coklu{ border-color:rgba(63,215,224,.5); color:var(--cyan); }
+  @keyframes pulse{
+    0%{ box-shadow:0 0 0 0 rgba(63,215,224,.55);}
+    70%{ box-shadow:0 0 0 8px rgba(63,215,224,0);}
+    100%{ box-shadow:0 0 0 0 rgba(63,215,224,0);}
+  }
+
+  /* ── Grid ── */
+  .grid{
+    display:grid;
+    grid-template-columns: 320px 1fr;
+    gap:20px;
+    align-items:stretch;
+  }
+  @media(max-width:840px){ .grid{ grid-template-columns:1fr; } }
+
+  .grid > div:last-child{
+    display:flex;
+    flex-direction:column;
+    gap:20px;
+  }
+  .chart-panel{
+    flex:1;
+    display:flex;
+    flex-direction:column;
+    min-height:0;
+  }
+  .chart-panel #trendChart{
+    flex:1;
+  }
+  #vanaPanel1 .metric-grid, #vanaPanel2 .metric-grid{ grid-template-columns:repeat(4,1fr); }
+  #vanaPanel1 .limit-notice, #vanaPanel2 .limit-notice{ display:none !important; }
+
+  .panel{
+    background:linear-gradient(180deg, var(--panel), #0e1c2c);
+    border:1px solid var(--line);
+    border-radius:10px;
+    padding:20px;
+    position:relative;
+    overflow:hidden;
+  }
+  .panel::before{
+    content:"";
+    position:absolute; top:0; left:0; right:0; height:2px;
+    background:linear-gradient(90deg, transparent, var(--cyan), transparent);
+    opacity:.5;
+  }
+  .panel-label{
+    font-family:'JetBrains Mono', monospace;
+    font-size:11px;
+    letter-spacing:.15em;
+    color:var(--text-dim);
+    text-transform:uppercase;
+    margin-bottom:14px;
+  }
+
+  /* ── Tank ── */
+  .tank-panel{ display:flex; flex-direction:column; align-items:center; }
+  .tank-shell{
+    position:relative;
+    width:150px;
+    height:300px;
+    border:2px solid var(--line);
+    border-radius:12px;
+    background:#08111c;
+    overflow:hidden;
+    box-shadow: inset 0 0 24px rgba(0,0,0,.5);
+  }
+  .tank-fill{
+    position:absolute;
+    bottom:0; left:0; right:0;
+    height:0%;
+    background:linear-gradient(180deg, var(--water-b), var(--water-a));
+    transition:height 1.1s cubic-bezier(.4,0,.2,1);
+  }
+  .tank-fill::before{
+    content:"";
+    position:absolute; top:-6px; left:0; right:0; height:12px;
+    background:repeating-linear-gradient(90deg,
+      rgba(255,255,255,.35) 0 18px, transparent 18px 36px);
+    opacity:.5;
+    animation:wave 3.4s linear infinite;
+  }
+  @keyframes wave{ from{ transform:translateX(0);} to{ transform:translateX(-36px);} }
+
+  .tank-ticks{
+    position:absolute; inset:0;
+  }
+  .tank-ticks div{
+    position:absolute; left:0; right:0; height:1px;
+    background:rgba(255,255,255,.06);
+  }
+
+  .tank-readout{
+    margin-top:18px;
+    text-align:center;
+  }
+  .tank-pct{
+    font-family:'JetBrains Mono', monospace;
+    font-size:44px;
+    font-weight:700;
+    color:var(--cyan);
+    line-height:1;
+  }
+  .tank-pct sup{ font-size:20px; color:var(--text-dim); font-weight:500; }
+  .tank-sub{
+    display:flex; gap:18px; justify-content:center;
+    margin-top:12px;
+    font-family:'JetBrains Mono', monospace;
+    font-size:13px;
+  }
+  .tank-sub div{ text-align:center; }
+  .tank-sub b{ display:block; font-size:17px; color:var(--text); }
+  .tank-sub span{ color:var(--text-dim); font-size:10px; letter-spacing:.1em; text-transform:uppercase; }
+
+  /* v3: A + B iki tank yan yana */
+  .tank-ikili{ display:flex; gap:22px; justify-content:center; width:100%; }
+  .tank-kol{ display:flex; flex-direction:column; align-items:center; }
+  .tank-kol .tank-shell{ width:112px; height:280px; }
+  .tank-ad{ font-family:'JetBrains Mono', monospace; font-size:11px; letter-spacing:.12em;
+            color:var(--text-dim); margin-bottom:8px; text-transform:uppercase; }
+  .tank-ad b{ color:var(--cyan); }
+  .tank-ikili .tank-pct{ font-size:36px; }
+  .tank-ikili .tank-sub{ gap:12px; }
+  .tank-ikili .tank-sub b{ font-size:14px; white-space:nowrap; }
+  .tank-ikili .tank-sub span{ white-space:nowrap; }
+  .tank-kol.b .tank-fill{ background:linear-gradient(180deg, #5fb3d6, #1f6d8f); }
+  .tank-kol.veri-yok .tank-pct{ color:var(--text-dim); }
+  .b-not{ font-family:'JetBrains Mono', monospace; font-size:10px; color:var(--text-dim);
+          margin-top:10px; letter-spacing:.08em; text-transform:uppercase; }
+
+  .cap-bar{
+    width:100%; margin-top:20px;
+    font-family:'JetBrains Mono', monospace;
+    font-size:11px; color:var(--text-dim);
+    display:flex; justify-content:space-between;
+    border-top:1px dashed var(--line);
+    padding-top:10px;
+  }
+
+  /* ── Flow cards ── */
+  .flow-row{
+    display:grid;
+    grid-template-columns:1fr 1fr;
+    gap:20px;
+    margin-bottom:20px;
+  }
+  @media(max-width:520px){ .flow-row{ grid-template-columns:1fr; } }
+
+  .flow-card{ position:relative; cursor:pointer; transition:border-color .2s, transform .15s; }
+  .flow-card:hover{ border-color:var(--cyan); transform:translateY(-1px); }
+  .flow-card:active{ transform:translateY(0); }
+  .flow-head{
+    display:flex; align-items:center; justify-content:space-between;
+  }
+  .flow-name{
+    font-size:18px; font-weight:700; color:#eef6fb;
+  }
+  .flow-tag{
+    font-family:'JetBrains Mono', monospace;
+    font-size:10px; color:var(--text-dim);
+    border:1px solid var(--line);
+    padding:2px 8px; border-radius:20px;
+  }
+  .flow-tag.inv2{ color:var(--amber); border-color:rgba(232,161,58,.4); }
+  .flow-val{
+    margin-top:18px;
+    display:flex; align-items:baseline; gap:8px;
+  }
+  .flow-num{
+    font-family:'JetBrains Mono', monospace;
+    font-size:40px; font-weight:700; color:var(--text);
+  }
+  .flow-unit{ color:var(--text-dim); font-size:14px; }
+  .flow-lps{
+    font-family:'JetBrains Mono', monospace;
+    font-size:12px;
+    color:var(--text-dim);
+    margin-top:2px;
+  }
+
+  .flow-line{
+    margin-top:16px; height:36px;
+    display:flex; align-items:flex-end; gap:3px;
+  }
+  .flow-line i{
+    flex:1; background:var(--cyan-dim); border-radius:2px 2px 0 0;
+    height:20%;
+    transition:height .8s ease, background .3s ease;
+  }
+  .flow-card.err .flow-num{ color:var(--danger); }
+  .flow-card.err .flow-line i{ background:rgba(224,85,95,.25); }
+  .flow-err-msg{
+    margin-top:10px;
+    font-family:'JetBrains Mono', monospace;
+    font-size:11px;
+    color:var(--danger);
+    display:none;
+  }
+  .flow-card.err .flow-err-msg{ display:block; }
+
+  /* ── meta strip ── */
+  .meta{
+    display:flex; gap:20px; flex-wrap:wrap;
+    font-family:'JetBrains Mono', monospace;
+    font-size:11px;
+    color:var(--text-dim);
+  }
+  .meta b{ color:var(--text); }
+
+  /* ── Trend chart ── */
+  .chart-head{
+    display:flex; align-items:center; justify-content:space-between;
+    margin-bottom:10px;
+  }
+  .chart-toggle{ display:flex; gap:6px; }
+  .ct-btn{
+    font-family:'JetBrains Mono', monospace;
+    font-size:10px;
+    letter-spacing:.06em;
+    background:transparent;
+    border:1px solid var(--line);
+    color:var(--text-dim);
+    padding:4px 10px;
+    border-radius:20px;
+    cursor:pointer;
+    transition:all .2s ease;
+  }
+  .ct-btn.active{
+    color:var(--bg-0);
+    background:var(--cyan);
+    border-color:var(--cyan);
+  }
+  #trendChart{
+    width:100%;
+    display:block;
+    background:#08111c;
+    border-radius:6px;
+    border:1px solid var(--line);
+  }
+  .chart-note{
+    margin-top:8px;
+    font-family:'JetBrains Mono', monospace;
+    font-size:10px;
+    color:var(--text-dim);
+    text-align:center;
+  }
+  .chart-stats{
+    display:flex;
+    justify-content:space-around;
+    margin-top:10px;
+    padding-top:10px;
+    border-top:1px solid var(--line);
+  }
+  .cstat{ display:flex; flex-direction:column; align-items:center; gap:2px; }
+  .cstat-label{
+    font-family:'JetBrains Mono', monospace;
+    font-size:10px; color:var(--text-dim); text-transform:uppercase;
+  }
+  .cstat-val{
+    font-family:'JetBrains Mono', monospace;
+    font-size:16px; font-weight:700; color:var(--cyan);
+  }
+
+  .foot{
+    margin-top:26px;
+    text-align:center;
+    font-family:'JetBrains Mono', monospace;
+    font-size:10px;
+    letter-spacing:.14em;
+    color:#3d5468;
+    text-transform:uppercase;
+  }
+
+  /* ══════════════════ VANA KONTROLÜ (yeni bölüm) ══════════════════ */
+  .vana-row{
+    display:grid;
+    grid-template-columns:1fr 1fr;
+    gap:20px;
+  }
+  #vanaPanel1{ grid-column:1; }
+  #vanaPanel2{ grid-column:2; }
+  @media(max-width:840px){
+    .vana-row{ grid-template-columns:1fr; }
+    #vanaPanel1, #vanaPanel2{ grid-column:1; }
+  }
+
+  .inv-badge{
+    font-family:'JetBrains Mono', monospace;
+    font-size:9.5px; font-weight:700; color:var(--text-dim);
+    background:var(--line-soft); border:1px solid var(--line);
+    border-radius:5px; padding:3px 8px; letter-spacing:.03em;
+  }
+  .inv-badge.inv2{ color:var(--amber); border-color:rgba(232,161,58,.35); }
+
+  .pos-track{
+    position:relative;height:32px;border-radius:8px;
+    background:linear-gradient(90deg, rgba(224,85,95,.12), rgba(255,255,255,.02) 45%, rgba(255,255,255,.02) 55%, rgba(63,209,122,.12));
+    border:1px solid var(--line);margin:14px 0 6px;overflow:hidden;
+  }
+  .pos-track .lbl-l, .pos-track .lbl-r{
+    position:absolute;top:50%;transform:translateY(-50%);
+    font-size:9px;font-weight:700;letter-spacing:.05em;color:var(--text-faint);
+    font-family:'JetBrains Mono', monospace;
+  }
+  .pos-track .lbl-l{left:10px;} .pos-track .lbl-r{right:10px;}
+  .pos-dot{
+    position:absolute;top:50%;width:13px;height:13px;border-radius:50%;
+    background:var(--cyan);box-shadow:0 0 10px var(--cyan);
+    transform:translate(-50%,-50%);left:50%;
+    transition:left .5s cubic-bezier(.34,1.4,.64,1), background .2s ease, box-shadow .2s ease;
+  }
+  .pos-dot.opening{background:var(--green);box-shadow:0 0 10px var(--green);}
+  .pos-dot.closing{background:var(--danger);box-shadow:0 0 10px var(--danger);}
+  .pos-caption{text-align:center;font-size:10px;color:var(--text-faint);font-family:'JetBrains Mono', monospace;letter-spacing:.05em;margin-bottom:12px;}
+
+  .limit-notice{
+    display:none;align-items:flex-start;gap:10px;
+    border-radius:8px;padding:11px 12px;margin-bottom:14px;
+  }
+  .limit-notice.show{display:flex;}
+  .limit-notice.ac{background:rgba(63,209,122,.09);border:1px solid rgba(63,209,122,.4);}
+  .limit-notice.kapat{background:rgba(224,85,95,.09);border:1px solid rgba(224,85,95,.4);}
+  .limit-notice .ic{font-size:18px;line-height:1;}
+  .limit-notice .body{flex:1;}
+  .limit-notice .title{font-size:12.5px;font-weight:700;letter-spacing:.01em;}
+  .limit-notice.ac .title{color:var(--green);}
+  .limit-notice.kapat .title{color:var(--danger);}
+  .limit-notice .desc{font-size:11px;color:var(--text-dim);margin-top:2px;line-height:1.4;}
+  .limit-notice .closeX{
+    flex-shrink:0;width:24px;height:24px;border-radius:6px;
+    background:rgba(255,255,255,.06);border:1px solid var(--line);
+    color:var(--text-dim);font-size:12px;font-weight:700;
+    display:flex;align-items:center;justify-content:center;
+    cursor:pointer;
+  }
+
+  .speed-box{background:var(--line-soft);border:1px solid var(--line);border-radius:9px;padding:12px 13px;margin:12px 0;}
+  .speed-head{display:flex;justify-content:space-between;align-items:baseline;margin-bottom:8px;}
+  .speed-head .lbl{font-size:10px;color:var(--text-faint);letter-spacing:.08em;text-transform:uppercase;font-family:'JetBrains Mono', monospace;}
+  .speed-head .val{font-family:'JetBrains Mono', monospace;font-size:16px;font-weight:700;color:var(--cyan);}
+  .speed-head .val .sub{font-size:10.5px;color:var(--text-dim);font-weight:500;}
+  input[type="range"].speed-slider{
+    -webkit-appearance:none;appearance:none;width:100%;height:6px;border-radius:4px;
+    background:linear-gradient(90deg, var(--cyan) 0%, var(--cyan) var(--fill,100%), var(--line) var(--fill,100%), var(--line) 100%);
+    outline:none;margin:6px 0 2px;
+  }
+  input[type="range"].speed-slider::-webkit-slider-thumb{
+    -webkit-appearance:none;appearance:none;width:19px;height:19px;border-radius:50%;
+    background:var(--cyan);border:3px solid var(--bg-0);box-shadow:0 0 8px rgba(63,215,224,.6);cursor:pointer;
+  }
+  input[type="range"].speed-slider::-moz-range-thumb{
+    width:19px;height:19px;border-radius:50%;background:var(--cyan);border:3px solid var(--bg-0);
+    box-shadow:0 0 8px rgba(63,215,224,.6);cursor:pointer;
+  }
+  .speed-scale{display:flex;justify-content:space-between;font-size:9px;color:var(--text-faint);font-family:'JetBrains Mono', monospace;margin-top:2px;}
+  .speed-slider-wrap{ position:relative; }
+  .speed-lock-overlay{
+    position:absolute; inset:-6px 0; border-radius:999px;
+    background:rgba(63,215,224,.12); border:1px solid var(--cyan);
+    display:flex; align-items:center; justify-content:center;
+    overflow:hidden; cursor:pointer; touch-action:none; -webkit-user-select:none; user-select:none;
+    -webkit-touch-callout:none;
+    transition:background .25s ease, border-color .25s ease;
+  }
+  .speed-lock-fill{ position:absolute; left:0; top:0; bottom:0; width:0%; background:rgba(240,101,63,.35); }
+  .speed-lock-icon{ position:relative; font-size:10px; font-weight:700; color:var(--cyan); letter-spacing:.02em; pointer-events:none; }
+  .speed-lock-overlay.holding{ background:rgba(240,101,63,.12); border-color:var(--danger); }
+  .speed-lock-overlay.holding .speed-lock-icon{ color:var(--danger); }
+  .speed-apply-row{display:flex;gap:8px;margin-top:10px;}
+  .speed-apply-btn{flex:1;height:34px;border-radius:8px;border:1px solid var(--line);font-size:12px;font-weight:700;cursor:pointer;}
+  .speed-apply-btn.ok{background:rgba(63,209,122,.15);border-color:rgba(63,209,122,.4);color:var(--green);}
+  .speed-apply-btn.cancel{background:var(--line-soft);color:var(--text-dim);}
+
+  .metric-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:4px;}
+  .metric-box{background:var(--line-soft);border:1px solid var(--line);border-radius:8px;padding:10px 12px;}
+  .metric-label{font-size:9.5px;color:var(--text-faint);letter-spacing:.08em;text-transform:uppercase;font-family:'JetBrains Mono', monospace;}
+  .metric-num{font-family:'JetBrains Mono', monospace;font-size:20px;font-weight:700;color:var(--text);margin-top:3px;font-variant-numeric:tabular-nums;}
+  .metric-num .unit{font-size:11px;color:var(--text-dim);font-weight:500;margin-left:3px;}
+  .metric-num.stale{opacity:.35;}
+
+  .status-row{display:flex;gap:8px;margin:12px 0 4px;}
+  .status-chip{
+    flex:1;border-radius:8px;padding:8px 10px;font-family:'JetBrains Mono', monospace;
+    display:flex;flex-direction:column;gap:2px;border:1px solid var(--line);
+    background:var(--line-soft);
+  }
+  .status-chip .lbl{font-size:9px;color:var(--text-faint);letter-spacing:.06em;text-transform:uppercase;}
+  .status-chip .val{font-size:12px;font-weight:700;}
+  .status-chip.ok .val{color:var(--green);}
+  .status-chip.err .val{color:var(--danger);}
+  .status-chip.idle .val{color:var(--text-dim);}
+  .status-chip.run .val{color:var(--cyan);}
+
+  .vbuttons{display:flex;gap:10px;margin-top:2px;}
+  .vbtn{
+    flex:1;height:70px;border-radius:10px;border:1px solid transparent;
+    font-family:'Rajdhani', sans-serif;
+    font-size:14px;font-weight:700;letter-spacing:.05em;color:#eafff5;
+    display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;
+    touch-action:none;transition:transform .06s ease, filter .1s ease, box-shadow .12s ease;
+    cursor:pointer;
+    position:relative;overflow:hidden;
+    -webkit-touch-callout:none;-webkit-user-select:none;user-select:none;
+  }
+  .vbtn-fill{
+    position:absolute;left:0;top:0;bottom:0;width:0%;
+    background:rgba(255,255,255,.28);pointer-events:none;z-index:0;
+  }
+  .vbtn .ic, .vbtn .lbl{ position:relative; z-index:1; }
+  .vbtn .ic{font-size:17px;line-height:1;}
+  .vbtn:active{transform:scale(.97);}
+  .vbtn.ac{background:linear-gradient(160deg,#1f9d55,#146b3b);box-shadow:0 6px 16px -9px rgba(31,157,85,.6);}
+  .vbtn.ac.pressed{background:linear-gradient(160deg,var(--green),#1f9d55);box-shadow:0 0 0 3px rgba(63,209,122,.25),0 8px 20px -6px rgba(63,209,122,.55);}
+  .vbtn.kapat{background:linear-gradient(160deg,#c14a34,#7f2e1e);box-shadow:0 6px 16px -9px rgba(193,74,52,.6);}
+  .vbtn.kapat.pressed{background:linear-gradient(160deg,var(--danger),#c14a34);box-shadow:0 0 0 3px rgba(240,101,63,.25),0 8px 20px -6px rgba(240,101,63,.55);}
+
+  .vhint{margin-top:11px;font-size:11px;color:var(--text-faint);line-height:1.55;}
+
+  .valert{
+    display:flex;gap:9px;align-items:flex-start;
+    border-left:3px solid var(--amber);background:rgba(232,161,58,.07);
+    border-radius:0 8px 8px 0;padding:9px 11px;font-size:11.5px;line-height:1.5;margin-bottom:12px;
+  }
+  .valert b{color:var(--amber);}
+  .valert.err{border-color:var(--danger);background:rgba(224,85,95,.08);}
+  .valert.err b{color:var(--danger);}
+  .valert.stale{border-color:var(--text-faint);background:rgba(255,255,255,.02);}
+  .valert.stale b{color:var(--text-dim);}
+  .valert.info{border-color:var(--text-faint);background:rgba(255,255,255,.02);font-size:10.5px;}
+  .valert[hidden]{display:none;}
+
+  .reset-btn{
+    width:100%;height:42px;margin-top:10px;border-radius:8px;
+    font-family:'Rajdhani', sans-serif;
+    font-size:12px;font-weight:700;letter-spacing:.03em;color:var(--cyan);
+    background:rgba(63,215,224,.06);border:1px solid rgba(63,215,224,.35);
+    display:flex;align-items:center;justify-content:center;gap:7px;
+    transition:transform .05s ease, background .12s ease;
+    cursor:pointer;
+  }
+  .reset-btn:active{transform:scale(.98);}
+  .reset-btn:disabled{opacity:.5;}
+  .reset-btn .spin{display:inline-block;animation:spin .8s linear infinite;}
+  @keyframes spin{from{transform:rotate(0deg);}to{transform:rotate(360deg);}}
+
+  /* ── Lock screen (tüm sayfa) ── */
+  #lockScreen{
+    position:fixed;inset:0;z-index:50;
+    background:
+      radial-gradient(1200px 600px at 15% -10%, #12293d 0%, transparent 60%),
+      var(--bg-0);
+    display:flex;align-items:center;justify-content:center;padding:22px;
+  }
+  .lock-card{
+    width:100%;max-width:320px;
+    background:linear-gradient(180deg, var(--panel), #0e1c2c);
+    border:1px solid var(--line);border-radius:14px;
+    padding:26px 22px 22px;text-align:center;
+    box-shadow:0 20px 50px -20px rgba(0,0,0,.7);
+  }
+  .lock-mark{
+    width:48px;height:48px;border-radius:12px;margin:0 auto 14px;
+    background:rgba(63,215,224,.08);border:1px solid rgba(63,215,224,.3);
+    display:flex;align-items:center;justify-content:center;font-size:21px;
+  }
+  .lock-card h2{font-size:16px;margin:0 0 4px;font-weight:700;color:#eef6fb;}
+  .lock-card p{font-size:11.5px;color:var(--text-dim);margin:0 0 18px;font-family:'JetBrains Mono', monospace;}
+  .pin-dots{display:flex;gap:12px;justify-content:center;margin-bottom:18px;}
+  .pin-dot{width:13px;height:13px;border-radius:50%;border:1.5px solid var(--line);background:transparent;transition:background .12s ease,border-color .12s ease,transform .12s ease;}
+  .pin-dot.filled{background:var(--cyan);border-color:var(--cyan);transform:scale(1.1);}
+  .pin-dot.err{background:var(--danger);border-color:var(--danger);}
+  .keypad{display:grid;grid-template-columns:repeat(3,1fr);gap:9px;}
+  .key{
+    height:52px;border-radius:9px;border:1px solid var(--line);
+    background:var(--line-soft);color:var(--text);font-size:18px;font-weight:600;
+    font-family:'JetBrains Mono', monospace;
+    display:flex;align-items:center;justify-content:center;transition:background .08s ease, transform .06s ease;
+    cursor:pointer;
+    touch-action:manipulation;
+    user-select:none;
+    -webkit-user-select:none;
+  }
+  .key:active{transform:scale(.95);background:rgba(63,215,224,.1);}
+  .key.wide{font-size:11px;color:var(--text-dim);}
+  .lock-err{height:16px;font-size:11px;color:var(--danger);margin-top:12px;opacity:0;transition:opacity .15s ease;}
+  .lock-err.show{opacity:1;}
+  .shake{animation:shakeAnim .35s ease;}
+  @keyframes shakeAnim{0%,100%{transform:translateX(0);}20%{transform:translateX(-8px);}40%{transform:translateX(8px);}60%{transform:translateX(-6px);}80%{transform:translateX(6px);}}
+
+  #appRoot{display:none;}
+
+  /* RAPOR MODU (?rapor=KOD): PIN atlanir, sadece izleme - kontroller gizli */
+  body.rapor-modu #vanaSection,
+  body.rapor-modu #ntfyTestPanel,
+  body.rapor-modu #izleyiciRozet{ display:none !important; }
+  body.rapor-modu .flow-card{ pointer-events:none; }
+</style>
+</head>
+<body>
+
+<!-- ══════ TÜM SAYFA PIN KİLİDİ ══════ -->
+<div id="lockScreen">
+  <div class="lock-card" id="lockCard">
+    <div class="lock-mark">🔒</div>
+    <h2>OSB Depokontrol</h2>
+    <p>erişim kodu gerekli</p>
+    <div class="pin-dots" id="pinDots">
+      <div class="pin-dot"></div><div class="pin-dot"></div><div class="pin-dot"></div><div class="pin-dot"></div>
+    </div>
+    <div class="keypad" id="keypad">
+      <button class="key" data-k="1">1</button><button class="key" data-k="2">2</button><button class="key" data-k="3">3</button>
+      <button class="key" data-k="4">4</button><button class="key" data-k="5">5</button><button class="key" data-k="6">6</button>
+      <button class="key" data-k="7">7</button><button class="key" data-k="8">8</button><button class="key" data-k="9">9</button>
+      <button class="key wide" data-k="clear">Temizle</button><button class="key" data-k="0">0</button><button class="key wide" data-k="back">⌫</button>
+    </div>
+    <div class="lock-err" id="lockErr">Hatalı kod, tekrar dene</div>
+  </div>
+</div>
+
+<div id="appRoot">
+<div class="wrap">
+
+  <div class="hdr">
+    <div>
+      <div class="hdr-title">Karahallı OSB · Su Deposu</div>
+      <h1>DEPOKONTROL <span>/ Canlı İzleme &amp; Vana Kontrolü</span></h1>
+    </div>
+    <div class="status">
+      <div class="dot" id="statusDot"></div>
+      <span id="statusText">bağlanıyor…</span>
+      <span id="izleyiciRozet" class="izleyici-rozet" title="Şu an sayfayı görüntüleyen kişi sayısı" hidden>👀 <span id="izleyiciSayi">1</span></span>
+    </div>
+  </div>
+
+  <div class="grid">
+
+    <!-- TANK -->
+    <div class="panel tank-panel">
+      <div class="panel-label" style="align-self:flex-start;">Depo Doluluk</div>
+      <div class="tank-ikili">
+        <!-- A DEPOSU (ana) -->
+        <div class="tank-kol a">
+          <div class="tank-ad"><b>A</b> Deposu</div>
+          <div class="tank-shell">
+            <div class="tank-ticks" id="tankTicks"></div>
+            <div class="tank-fill" id="tankFill"></div>
+          </div>
+          <div class="tank-readout">
+            <div class="tank-pct" id="tankPct">--<sup>%</sup></div>
+            <div class="tank-sub">
+              <div><b id="tankCm">-- cm</b><span>Derinlik</span></div>
+              <div><b id="tankTon">-- t</b><span>Su Miktarı</span></div>
+            </div>
+          </div>
+        </div>
+        <!-- B DEPOSU (yedek) - sadece % -->
+        <div class="tank-kol b" id="tankKolB">
+          <div class="tank-ad"><b>B</b> Deposu</div>
+          <div class="tank-shell">
+            <div class="tank-ticks" id="tankTicksB"></div>
+            <div class="tank-fill" id="tankFillB"></div>
+          </div>
+          <div class="tank-readout">
+            <div class="tank-pct" id="tankPctB">--<sup>%</sup></div>
+            <div class="b-not" id="tankNotB">yedek depo</div>
+          </div>
+        </div>
+      </div>
+      <div class="cap-bar">
+        <span>KAPASİTE (HER DEPO)</span>
+        <span>500 TON / 320 CM</span>
+      </div>
+    </div>
+
+    <!-- RIGHT COLUMN -->
+    <div>
+      <div class="flow-row">
+        <div class="panel flow-card" id="flow1Card">
+          <div class="flow-head">
+            <div class="flow-name">Çıkış <span style="color:var(--text-dim); font-size:14px;">(Flowmetre #1)</span></div>
+            <div class="flow-tag">MODBUS · ADR 1</div>
+          </div>
+          <div class="flow-val">
+            <div class="flow-num" id="flow1Num">--</div>
+            <div class="flow-unit">m³/h</div>
+          </div>
+          <div class="flow-lps" id="flow1Lps">-- L/s</div>
+          <div class="flow-line" id="flow1Line"></div>
+          <div class="flow-err-msg">SİNYAL YOK — MODBUS CEVAP VERMİYOR</div>
+        </div>
+
+        <div class="panel flow-card" id="flow2Card">
+          <div class="flow-head">
+            <div class="flow-name">Giriş <span style="color:var(--text-dim); font-size:14px;">(Flowmetre #2)</span></div>
+            <div class="flow-tag">MODBUS · ADR 2</div>
+          </div>
+          <div class="flow-val">
+            <div class="flow-num" id="flow2Num">--</div>
+            <div class="flow-unit">m³/h</div>
+          </div>
+          <div class="flow-lps" id="flow2Lps">-- L/s</div>
+          <div class="flow-line" id="flow2Line"></div>
+          <div class="flow-err-msg">SİNYAL YOK — MODBUS CEVAP VERMİYOR</div>
+        </div>
+      </div>
+
+      <!-- Trend chart: tank yanindaki bosluga, flow kartlarinin altina -->
+      <div class="panel chart-panel">
+        <div class="chart-head">
+          <span class="panel-label" style="margin:0;">Doluluk Eğilimi</span>
+          <div class="chart-toggle">
+            <button class="ct-btn active" data-range="today">Bugün</button>
+            <button class="ct-btn" data-range="week">Hafta</button>
+          </div>
+        </div>
+        <canvas id="trendChart" width="780" height="300"></canvas>
+        <div class="chart-stats">
+          <div class="cstat"><span class="cstat-label">Ortalama</span><span class="cstat-val" id="cstatAvg">—</span></div>
+          <div class="cstat"><span class="cstat-label">Min</span><span class="cstat-val" id="cstatMin">—</span></div>
+          <div class="cstat"><span class="cstat-label">Maks</span><span class="cstat-val" id="cstatMax">—</span></div>
+        </div>
+        <div class="chart-note" id="chartNote">canlı oturum verisi birikiyor…</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- VANA KONTROLÜ - bagimsiz iki panel, Cikis/Giris kartina basilinca acilir, ikisi de ayni anda acik kalabilir -->
+  <div class="panel" style="margin-top:20px;" id="vanaSection" hidden>
+    <div class="hdr" style="border:none; margin-bottom:12px; padding-bottom:0;">
+      <span class="panel-label" style="margin:0;">Vana Kontrolü</span>
+      <div class="status" style="gap:10px;">
+        <div class="dot" id="liveDot"></div>
+        <span id="liveText">bağlanıyor</span>
+      </div>
+    </div>
+
+    <div class="valert" style="margin-bottom:16px;">
+      <span>⚠️</span>
+      <div><b>Limit switch bağlı değil (demo modu).</b> Buton basılı tuttuğun sürece motor döner, bıraktığında durur.</div>
+    </div>
+
+    <div class="vana-row">
+      <div class="panel" id="vanaPanel1" hidden style="position:relative;">
+        <button id="vanaClose1" title="Kapat" style="position:absolute; top:14px; right:14px; background:none; border:1px solid var(--line); color:var(--danger); border-radius:8px; width:30px; height:30px; font-size:15px; cursor:pointer; line-height:1; z-index:2;">✕</button>
+                <div id="invPanel1">
+        <div class="hdr" style="border:none; margin-bottom:0; padding-bottom:0;">
+          <div>
+            <div class="panel-label" style="margin-bottom:2px;">Modbus · ADR 1</div>
+            <div style="font-size:17px; font-weight:700; color:#eef6fb;">Çıkış Vanası</div>
+          </div>
+          <div class="inv-badge inv2">İNVERTER 1</div>
+        </div>
+
+        <div class="pos-track">
+          <span class="lbl-l">KAPALI</span><span class="lbl-r">AÇIK</span>
+          <div class="pos-dot" id="posDot1"></div>
+        </div>
+        <div class="pos-caption" id="posCaption1">beklemede · temsili gösterge</div>
+
+        <div class="limit-notice" id="limitNotice1">
+          <span class="ic">⚠️</span>
+          <div class="body">
+            <div class="title" id="limitNoticeTitle1">—</div>
+            <div class="desc" id="limitNoticeDesc1">—</div>
+          </div>
+          <button class="closeX" id="limitNoticeClose1">✕</button>
+        </div>
+
+        <div class="speed-box">
+          <div class="speed-head">
+            <span class="lbl">Hız Ayarı</span>
+            <span class="val"><span id="speedPct1">100</span>% <span class="sub" id="speedHzRpm1">(18.5 Hz · 500 rpm)</span></span>
+          </div>
+          <div class="speed-slider-wrap" id="speedWrap1">
+            <input type="range" class="speed-slider" id="speedSlider1" min="0" max="100" value="100" style="--fill:100%;">
+            <div class="speed-lock-overlay" id="speedLock1">
+              <div class="speed-lock-fill" id="speedLockFill1"></div>
+              <span class="speed-lock-icon" id="speedLockIcon1">🔒 Değiştirmek için basılı tut</span>
+            </div>
+          </div>
+          <div class="speed-scale"><span>0%</span><span>50%</span><span>100%</span></div>
+          <div class="speed-apply-row" id="speedApplyRow1" hidden>
+            <button class="speed-apply-btn ok" id="speedApplyBtn1">✓ Uygula</button>
+            <button class="speed-apply-btn cancel" id="speedRevertBtn1">↺ Geri Al</button>
+          </div>
+        </div>
+
+        <div class="metric-grid">
+          <div class="metric-box"><div class="metric-label">Hız</div><div class="metric-num" id="mRpm1">— <span class="unit">rpm</span></div></div>
+          <div class="metric-box"><div class="metric-label">Frekans</div><div class="metric-num" id="mFreq1">— <span class="unit">Hz</span></div></div>
+          <div class="metric-box"><div class="metric-label">Akım</div><div class="metric-num" id="mAmp1">— <span class="unit">A</span></div></div>
+          <div class="metric-box"><div class="metric-label">Gerilim</div><div class="metric-num" id="mVolt1">— <span class="unit">V</span></div></div>
+        </div>
+
+        <div class="status-row">
+          <div class="status-chip idle" id="statusChip1"><span class="lbl">Durum</span><span class="val" id="statusVal1">BEKLEMEDE</span></div>
+          <div class="status-chip idle" id="modbusChip1"><span class="lbl">Haberleşim</span><span class="val" id="modbusVal1">KONTROL EDİLİYOR</span></div>
+        </div>
+
+        <div class="vbuttons">
+          <button class="vbtn ac" id="btnAc1"><div class="vbtn-fill" id="btnAc1Fill"></div><span class="ic">▲</span><span class="lbl">AÇ</span></button>
+          <button class="vbtn kapat" id="btnKapat1"><div class="vbtn-fill" id="btnKapat1Fill"></div><span class="ic">▼</span><span class="lbl">KAPAT</span></button>
+        </div>
+
+        <div class="valert err" id="asiriAkimBanner1" hidden><span>⚠️</span><div><b id="asiriAkimBaslik1">Aşırı akım</b> — <span id="asiriAkimAciklama1">motor otomatik durduruldu.</span></div></div>
+        <div class="valert" id="arizaBanner1" hidden><span>⚠️</span><div><b>Muhtemel arıza</b> — komut verildi ama motor tepki vermiyor, paneli kontrol et.</div></div>
+        <div class="valert stale" id="bayatBanner1" hidden><span>⏱️</span><div><b>Bayat veri</b> — son güncelleme <span id="bayatSaniye1">—</span> saniye önce, güvenme.</div></div>
+
+        <div class="vhint">Basılı tut → motor döner. Bırak → motor durur. Komut ~300ms aralıklarla iletilir.</div>
+
+        <button class="reset-btn" id="btnReset1">🔄 İnvertörü Fiziksel Sıfırla (RES)</button>
+      </div>
+
+            </div>
+
+      <div class="panel" id="vanaPanel2" hidden style="position:relative;">
+        <button id="vanaClose2" title="Kapat" style="position:absolute; top:14px; right:14px; background:none; border:1px solid var(--line); color:var(--danger); border-radius:8px; width:30px; height:30px; font-size:15px; cursor:pointer; line-height:1; z-index:2;">✕</button>
+          <div id="invPanel2">
+        <div class="hdr" style="border:none; margin-bottom:0; padding-bottom:0;">
+          <div>
+            <div class="panel-label" style="margin-bottom:2px;">Modbus · ADR 2</div>
+            <div style="font-size:17px; font-weight:700; color:#eef6fb;">Giriş Vanası</div>
+          </div>
+          <div class="inv-badge inv2">İNVERTER 2</div>
+        </div>
+
+        <div class="pos-track">
+          <span class="lbl-l">KAPALI</span><span class="lbl-r">AÇIK</span>
+          <div class="pos-dot" id="posDot2"></div>
+        </div>
+        <div class="pos-caption" id="posCaption2">beklemede · temsili gösterge</div>
+
+        <div class="limit-notice" id="limitNotice2">
+          <span class="ic">⚠️</span>
+          <div class="body">
+            <div class="title" id="limitNoticeTitle2">—</div>
+            <div class="desc" id="limitNoticeDesc2">—</div>
+          </div>
+          <button class="closeX" id="limitNoticeClose2">✕</button>
+        </div>
+
+        <div class="speed-box">
+          <div class="speed-head">
+            <span class="lbl">Hız Ayarı</span>
+            <span class="val"><span id="speedPct2">100</span>% <span class="sub" id="speedHzRpm2">(18.5 Hz · 500 rpm)</span></span>
+          </div>
+          <div class="speed-slider-wrap" id="speedWrap2">
+            <input type="range" class="speed-slider" id="speedSlider2" min="0" max="100" value="100" style="--fill:100%;">
+            <div class="speed-lock-overlay" id="speedLock2">
+              <div class="speed-lock-fill" id="speedLockFill2"></div>
+              <span class="speed-lock-icon" id="speedLockIcon2">🔒 Değiştirmek için basılı tut</span>
+            </div>
+          </div>
+          <div class="speed-scale"><span>0%</span><span>50%</span><span>100%</span></div>
+          <div class="speed-apply-row" id="speedApplyRow2" hidden>
+            <button class="speed-apply-btn ok" id="speedApplyBtn2">✓ Uygula</button>
+            <button class="speed-apply-btn cancel" id="speedRevertBtn2">↺ Geri Al</button>
+          </div>
+        </div>
+
+        <div class="metric-grid">
+          <div class="metric-box"><div class="metric-label">Hız</div><div class="metric-num" id="mRpm2">— <span class="unit">rpm</span></div></div>
+          <div class="metric-box"><div class="metric-label">Frekans</div><div class="metric-num" id="mFreq2">— <span class="unit">Hz</span></div></div>
+          <div class="metric-box"><div class="metric-label">Akım</div><div class="metric-num" id="mAmp2">— <span class="unit">A</span></div></div>
+          <div class="metric-box"><div class="metric-label">Gerilim</div><div class="metric-num" id="mVolt2">— <span class="unit">V</span></div></div>
+        </div>
+
+        <div class="status-row">
+          <div class="status-chip idle" id="statusChip2"><span class="lbl">Durum</span><span class="val" id="statusVal2">BEKLEMEDE</span></div>
+          <div class="status-chip idle" id="modbusChip2"><span class="lbl">Haberleşim</span><span class="val" id="modbusVal2">KONTROL EDİLİYOR</span></div>
+        </div>
+
+        <div class="vbuttons">
+          <button class="vbtn ac" id="btnAc2"><div class="vbtn-fill" id="btnAc2Fill"></div><span class="ic">▲</span><span class="lbl">AÇ</span></button>
+          <button class="vbtn kapat" id="btnKapat2"><div class="vbtn-fill" id="btnKapat2Fill"></div><span class="ic">▼</span><span class="lbl">KAPAT</span></button>
+        </div>
+
+        <div class="valert err" id="asiriAkimBanner2" hidden><span>⚠️</span><div><b id="asiriAkimBaslik2">Aşırı akım</b> — <span id="asiriAkimAciklama2">motor otomatik durduruldu.</span></div></div>
+        <div class="valert" id="arizaBanner2" hidden><span>⚠️</span><div><b>Muhtemel arıza</b> — komut verildi ama motor tepki vermiyor, paneli kontrol et.</div></div>
+        <div class="valert stale" id="bayatBanner2" hidden><span>⏱️</span><div><b>Bayat veri</b> — son güncelleme <span id="bayatSaniye2">—</span> saniye önce, güvenme.</div></div>
+
+        <div class="vhint">Basılı tut → motor döner. Bırak → motor durur. Komut ~300ms aralıklarla iletilir.</div>
+
+        <button class="reset-btn" id="btnReset2">🔄 İnvertörü Fiziksel Sıfırla (RES)</button>
+      </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- FULL WIDTH: Ham veri -->
+  <div class="panel" style="margin-top:20px;">
+    <div class="panel-label">Ham Veri / Kalibrasyon</div>
+    <div class="meta">
+      <div>BASINC ADC: <b id="metaAdc">--</b></div>
+      <div>A KAYNAĞI: <b id="metaAKaynak">--</b></div>
+      <div>ESP32#3: <b id="metaE3">--</b></div>
+      <div>SON GÜNCELLEME: <b id="metaTime">--</b></div>
+      <div>KAYNAK: <b>osb1-d8ac3 / europe-west1</b></div>
+    </div>
+  </div>
+
+  <!-- FULL WIDTH: Bildirim testi (ntfy) -->
+  <div class="panel" style="margin-top:20px;" id="ntfyTestPanel">
+    <div class="panel-label">Bildirim Testi (ntfy)</div>
+    <div class="meta" style="margin-bottom:14px;">
+      <div>SUNUCU: <b>zil.afoio.com</b></div>
+      <div>KANAL: <b>su</b></div>
+    </div>
+    <button id="btnNtfyTest" class="reset-btn" style="max-width:260px;">🔔 Test Bildirimi Gönder</button>
+    <div id="ntfyTestSonuc" style="margin-top:10px; font-size:12px; color:var(--text-dim);"></div>
+  </div>
+
+  <div class="foot" id="connInfo" style="margin-top:26px;">Erikoğlu depo verisi ile çapraz doğrulama yapılmıştır · firebase bağlanıyor… · CRT Otomasyon</div>
+
+</div>
+</div>
+
+<script>
+/* ══════════════════ PIN KİLİDİ (tüm sayfa) ══════════════════ */
+const ERISIM_KODU = "6464";
+let girilenKod = "";
+const pinDotsEl = document.getElementById("pinDots");
+const lockCardEl = document.getElementById("lockCard");
+const lockErrEl = document.getElementById("lockErr");
+
+function pinGoster() {
+  pinDotsEl.querySelectorAll(".pin-dot").forEach((d, i) => {
+    d.classList.toggle("filled", i < girilenKod.length);
+    d.classList.remove("err");
+  });
+}
+function kilitAc() {
+  document.getElementById("lockScreen").style.display = "none";
+  document.getElementById("appRoot").style.display = "block";
+}
+/* RAPOR MODU: ESP32'nin Telegram ekran goruntusu icin kullandigi gizli link.
+   Normal link (kodsuz) -> PIN ekrani AYNEN devam eder. */
+const RAPOR_KODU = "osbR7391";
+const RAPOR_MODU = (new URLSearchParams(location.search).get("rapor") || "").startsWith(RAPOR_KODU);   // ESP32 sonuna _zaman ekler
+if (RAPOR_MODU) {
+  document.body.classList.add("rapor-modu");
+  kilitAc();
+}
+
+function yanlisKod() {
+  lockErrEl.classList.add("show");
+  lockCardEl.classList.add("shake");
+  pinDotsEl.querySelectorAll(".pin-dot").forEach(d => d.classList.add("err"));
+  setTimeout(() => { lockCardEl.classList.remove("shake"); girilenKod = ""; pinGoster(); }, 400);
+}
+document.getElementById("keypad").addEventListener("pointerdown", (e) => {
+  const key = e.target.closest(".key");
+  if (!key) return;
+  e.preventDefault();
+  const k = key.dataset.k;
+  if (k === "clear") { girilenKod = ""; lockErrEl.classList.remove("show"); pinGoster(); return; }
+  if (k === "back") { girilenKod = girilenKod.slice(0, -1); lockErrEl.classList.remove("show"); pinGoster(); return; }
+  if (girilenKod.length < 4) {
+    girilenKod += k; pinGoster();
+    if (girilenKod.length === 4) {
+      setTimeout(() => { girilenKod === ERISIM_KODU ? kilitAc() : yanlisKod(); }, 150);
+    }
+  }
+});
+
+/* ══════════════════ ORTAK FIREBASE AYARLARI ══════════════════ */
+const FIREBASE_HOST = "osb1-d8ac3-default-rtdb.europe-west1.firebasedatabase.app";
+const FIREBASE_AUTH = "oRbdUzzl3fIsWx1QfuP66P2g3R9JRJtF1PAhgUjf";
+const PATH = "osb_depokontrol";
+const POLL_MS = 5000;
+
+/* ══════════════════ KAÇ KİŞİ İZLİYOR (basit nabız-tabanlı varlık takibi) ══════════════════ */
+/* Gercek "onDisconnect" ozelligi REST API ile mumkun degil (sadece Firebase SDK/WebSocket'te
+   var) - o yuzden her istemci kendi kimligini periyodik olarak "canliyim" diye yazar, 25sn'den
+   eski kayitlar "artik burada degil" sayilip sayima dahil edilmez. */
+const IZLEYICI_ID = 'k' + Date.now().toString(36) + Math.random().toString(36).slice(2,8);
+const IZLEYICI_NABIZ_MS = 10000;
+const IZLEYICI_STALE_MS = 25000;
+
+function izleyiciNabizGonder(){
+  if (RAPOR_MODU) return;   // ekran goruntusu servisi izleyici sayilmasin
+  const url = `https://${FIREBASE_HOST}/${PATH}/izleyiciler/${IZLEYICI_ID}.json?auth=${FIREBASE_AUTH}`;
+  fetch(url, { method:"PUT", headers:{"Content-Type":"application/json"}, body: JSON.stringify({".sv":"timestamp"}) }).catch(()=>{});
+}
+function izleyiciSayisiniGuncelle(){
+  const url = `https://${FIREBASE_HOST}/${PATH}/izleyiciler.json?auth=${FIREBASE_AUTH}`;
+  fetch(url, {cache:"no-store"}).then(r => r.json()).then(data => {
+    if(!data) { izleyiciRozetGoster(1); return; }
+    const simdi = Date.now();
+    let aktifSayi = 0;
+    Object.values(data).forEach(ts => { if(typeof ts === 'number' && (simdi - ts) < IZLEYICI_STALE_MS) aktifSayi++; });
+    izleyiciRozetGoster(Math.max(1, aktifSayi));
+  }).catch(()=>{});
+}
+function izleyiciRozetGoster(sayi){
+  const rozet = document.getElementById('izleyiciRozet');
+  document.getElementById('izleyiciSayi').textContent = sayi;
+  rozet.hidden = false;
+  rozet.classList.toggle('coklu', sayi > 1);
+  rozet.title = sayi > 1 ? `Şu an ${sayi} kişi bu sayfayı görüntülüyor` : 'Şu an sadece sen görüntülüyorsun';
+}
+izleyiciNabizGonder();
+izleyiciSayisiniGuncelle();
+setInterval(izleyiciNabizGonder, IZLEYICI_NABIZ_MS);
+setInterval(izleyiciSayisiniGuncelle, IZLEYICI_NABIZ_MS);
+
+/* ══════════════════ DEPO İZLEME (tank + flowmetre + trend) ══════════════════ */
+['tankTicks','tankTicksB'].forEach(id=>{
+  const ticks = document.getElementById(id);
+  for(let i=1;i<5;i++){
+    const d = document.createElement('div');
+    d.style.top = (i*20)+'%';
+    ticks.appendChild(d);
+  }
+});
+
+const histLen = 24;
+let hist1 = new Array(histLen).fill(0);
+let hist2 = new Array(histLen).fill(0);
+
+function buildBars(container, hist, maxVal){
+  container.innerHTML = '';
+  hist.forEach(v=>{
+    const bar = document.createElement('i');
+    const pct = maxVal>0 ? Math.max(6, Math.min(100,(v/maxVal)*100)) : 6;
+    bar.style.height = pct+'%';
+    container.appendChild(bar);
+  });
+}
+
+function setFlow(id, cardId, lineId, value, hist){
+  const num = document.getElementById(id);
+  const card = document.getElementById(cardId);
+  const line = document.getElementById(lineId);
+
+  if(value === null || value <= -900){
+    card.classList.add('err');
+    num.textContent = '—';
+    return hist;
+  }
+  card.classList.remove('err');
+  num.textContent = value.toFixed(4);
+  hist.push(value); hist.shift();
+  const maxVal = Math.max(...hist, 0.001);
+  buildBars(line, hist, maxVal);
+  return hist;
+}
+
+let currentRange = 'today';
+let gecmisVeri = [];
+const trendCanvas = document.getElementById('trendChart');
+const trendCtx = trendCanvas.getContext('2d');
+
+function epochFromDateStr(tarih, saat){
+  const [g,a,y] = tarih.split('.');
+  return new Date(`${y}-${a}-${g}T${saat}`).getTime();
+}
+
+async function gecmisVeriCek(){
+  try{
+    const url = `https://${FIREBASE_HOST}/osb_depokontrol/gecmis.json?auth=${FIREBASE_AUTH}`;
+    const res = await fetch(url, {cache:"no-store"});
+    if(!res.ok) throw new Error("HTTP "+res.status);
+    const data = await res.json();
+    if(!data){ gecmisVeri = []; renderTrend(); return; }
+
+    gecmisVeri = Object.values(data)
+      .filter(r => r && r.tarih && r.saat && typeof r.yuzde === 'number')
+      .map(r => ({ t: epochFromDateStr(r.tarih, r.saat), pct: r.yuzde }))
+      .sort((a,b) => a.t - b.t);
+
+    renderTrend();
+  }catch(err){
+    console.error('Geçmiş veri çekilemedi', err);
+  }
+}
+
+function drawTrend(points){
+  const cssWidth = trendCanvas.clientWidth || 780;
+  const cssHeight = trendCanvas.clientHeight || 300;
+  if(trendCanvas.width !== cssWidth) trendCanvas.width = cssWidth;
+  if(trendCanvas.height !== cssHeight) trendCanvas.height = cssHeight;
+  const w = trendCanvas.width, h = trendCanvas.height;
+  trendCtx.clearRect(0,0,w,h);
+
+  if(!points || points.length < 2){
+    trendCtx.fillStyle = '#3d5468';
+    trendCtx.font = '11px JetBrains Mono';
+    trendCtx.textAlign = 'center';
+    trendCtx.fillText('henüz yeterli geçmiş veri birikmedi', w/2, h/2);
+    ['Avg','Min','Max'].forEach(k=>{
+      const el = document.getElementById('cstat'+k);
+      if(el) el.textContent = '—';
+    });
+    return;
+  }
+
+  const vals = points.map(p=>p.pct);
+  const maxV = Math.max(...vals, 5);
+  const minV = Math.min(...vals, 0);
+  const padL = 10, padR = 10, padT = 10, padB = 22;
+
+  trendCtx.strokeStyle = 'rgba(255,255,255,.06)';
+  trendCtx.lineWidth = 1;
+  for(let i=0;i<=3;i++){
+    const y = padT + (h-padT-padB)*i/3;
+    trendCtx.beginPath();
+    trendCtx.moveTo(0,y); trendCtx.lineTo(w,y);
+    trendCtx.stroke();
+  }
+
+  trendCtx.font = '9px JetBrains Mono';
+  trendCtx.fillStyle = '#3d5468';
+  trendCtx.textAlign = 'center';
+  trendCtx.strokeStyle = 'rgba(255,255,255,.05)';
+  let lastLabel = null;
+  points.forEach((p,i)=>{
+    const x = padL + (w-padL-padR) * (i/(points.length-1));
+    const d = new Date(p.t);
+    const label = currentRange === 'today'
+      ? d.toLocaleTimeString('tr-TR',{hour:'2-digit',minute:'2-digit'})
+      : d.toLocaleDateString('tr-TR',{day:'2-digit',month:'2-digit'});
+    const key = currentRange === 'today' ? d.getHours() : d.getDate();
+    if(key !== lastLabel){
+      lastLabel = key;
+      trendCtx.beginPath();
+      trendCtx.moveTo(x, padT); trendCtx.lineTo(x, h-padB);
+      trendCtx.stroke();
+      trendCtx.fillText(label, x, h-padB+12);
+    }
+  });
+
+  trendCtx.beginPath();
+  trendCtx.strokeStyle = '#3fd7e0';
+  trendCtx.lineWidth = 2;
+  points.forEach((p,i)=>{
+    const x = padL + (w-padL-padR) * (i/(points.length-1));
+    const y = h-padB - (h-padT-padB) * ((p.pct-minV)/Math.max(0.001,(maxV-minV)));
+    if(i===0) trendCtx.moveTo(x,y); else trendCtx.lineTo(x,y);
+  });
+  trendCtx.stroke();
+
+  trendCtx.lineTo(w-padR, h-padB);
+  trendCtx.lineTo(padL, h-padB);
+  trendCtx.closePath();
+  const grad = trendCtx.createLinearGradient(0,0,0,h);
+  grad.addColorStop(0,'rgba(63,215,224,.28)');
+  grad.addColorStop(1,'rgba(63,215,224,0)');
+  trendCtx.fillStyle = grad;
+  trendCtx.fill();
+
+  const avg = vals.reduce((a,b)=>a+b,0)/vals.length;
+  const min = Math.min(...vals), max = Math.max(...vals);
+  document.getElementById('cstatAvg').textContent = '%'+avg.toFixed(1);
+  document.getElementById('cstatMin').textContent = '%'+min.toFixed(1);
+  document.getElementById('cstatMax').textContent = '%'+max.toFixed(1);
+}
+
+function renderTrend(){
+  const now = Date.now();
+  const pencere = currentRange === 'today' ? 24*3600*1000 : 7*24*3600*1000;
+  const filtreli = gecmisVeri.filter(p => (now - p.t) <= pencere);
+  drawTrend(filtreli);
+
+  document.getElementById('chartNote').textContent =
+    filtreli.length < 2
+      ? 'Firebase geçmiş kaydından veri bekleniyor (ESP32 10 dakikada bir yazıyor)…'
+      : `Firebase geçmiş kaydından (${filtreli.length} nokta, ${currentRange==='today'?'son 24 saat':'son 7 gün'})`;
+}
+
+document.querySelectorAll('.ct-btn').forEach(btn=>{
+  btn.addEventListener('click', ()=>{
+    document.querySelectorAll('.ct-btn').forEach(b=>b.classList.remove('active'));
+    btn.classList.add('active');
+    currentRange = btn.dataset.range;
+    renderTrend();
+  });
+});
+
+// Flow karti -> ilgili vana panelini bagimsiz olarak ac/kapat (ikisi ayni anda acik kalabilir)
+const VANA_OTO_KAPAT_MS = 5 * 60 * 1000;   // 5 dakika islem yapilmazsa kendiliginden kapanir
+const vanaOtoKapatTimer = {1: null, 2: null};
+
+function vanaSectionGorunumunuGuncelle(){
+  const p1acik = !document.getElementById('vanaPanel1').hidden;
+  const p2acik = !document.getElementById('vanaPanel2').hidden;
+  document.getElementById('vanaSection').hidden = !(p1acik || p2acik);
+}
+
+function vanaOtoKapatSifirla(n){
+  clearTimeout(vanaOtoKapatTimer[n]);
+  vanaOtoKapatTimer[n] = setTimeout(() => vanaPaneliKapat(n), VANA_OTO_KAPAT_MS);
+}
+
+function vanaPaneliAc(n){
+  document.getElementById('vanaPanel'+n).hidden = false;
+  vanaSectionGorunumunuGuncelle();
+  vanaOtoKapatSifirla(n);
+}
+function vanaPaneliKapat(n){
+  document.getElementById('vanaPanel'+n).hidden = true;
+  clearTimeout(vanaOtoKapatTimer[n]);
+  vanaSectionGorunumunuGuncelle();
+}
+function vanaPaneliToggle(n){
+  const panel = document.getElementById('vanaPanel'+n);
+  if(panel.hidden) vanaPaneliAc(n); else vanaPaneliKapat(n);
+}
+
+document.getElementById('flow1Card').addEventListener('click', ()=> vanaPaneliToggle(1));
+document.getElementById('flow2Card').addEventListener('click', ()=> vanaPaneliToggle(2));
+document.getElementById('vanaClose1').addEventListener('click', ()=> vanaPaneliKapat(1));
+document.getElementById('vanaClose2').addEventListener('click', ()=> vanaPaneliKapat(2));
+
+// Panel icinde herhangi bir etkilesim (buton, kaydirici) olursa 5dk sayacini sifirla - unutulmus sayilmasin
+document.getElementById('vanaPanel1').addEventListener('pointerdown', ()=> vanaOtoKapatSifirla(1));
+document.getElementById('vanaPanel2').addEventListener('pointerdown', ()=> vanaOtoKapatSifirla(2));
+
+async function fetchData(){
+  try{
+    const url = `https://${FIREBASE_HOST}/${PATH}.json?auth=${FIREBASE_AUTH}`;
+    const res = await fetch(url, {cache:"no-store"});
+    if(!res.ok) throw new Error("HTTP "+res.status);
+    const data = await res.json();
+    if(!data) throw new Error("boş veri");
+
+    document.getElementById('statusDot').classList.remove('off');
+    document.getElementById('statusText').textContent = 'canlı';
+
+    const pct = data.doluluk_yuzde ?? 0;
+    const cm = data.derinlik_cm ?? 0;
+    const ton = data.doluluk_ton ?? 0;
+    const adc = data.basinc_adc ?? '--';
+
+    document.getElementById('tankFill').style.height = Math.min(100, Math.max(0,pct)) + '%';
+    document.getElementById('tankPct').innerHTML = pct.toFixed(1)+'<sup>%</sup>';
+    document.getElementById('tankCm').textContent = cm.toFixed(1)+' cm';
+    document.getElementById('tankTon').textContent = ton.toFixed(2)+' t';
+    document.getElementById('metaAdc').textContent = adc;
+
+    /* v3: B deposu (ESP32#3 -> ESP32#1 -> Firebase) */
+    const e3Yas = data.esp32_3_veri_yas_sn;                 // sn; -1 = hic veri gelmedi
+    const e3Taze = (e3Yas !== undefined && e3Yas >= 0 && e3Yas < 300);
+    const bPct = data.b_doluluk_yuzde;
+    const kolB = document.getElementById('tankKolB');
+    if (bPct !== undefined && e3Taze && data.b_durum === 'OK') {
+      kolB.classList.remove('veri-yok');
+      document.getElementById('tankFillB').style.height = Math.min(100, Math.max(0,bPct)) + '%';
+      document.getElementById('tankPctB').innerHTML = bPct.toFixed(1)+'<sup>%</sup>';
+      document.getElementById('tankNotB').textContent = 'yedek depo';
+    } else {
+      kolB.classList.add('veri-yok');
+      if (bPct === undefined) document.getElementById('tankPctB').innerHTML = '--<sup>%</sup>';
+      document.getElementById('tankNotB').textContent =
+        !e3Taze ? 'veri yok' : ('sensör: ' + (data.b_durum || '?'));
+    }
+    document.getElementById('metaAKaynak').textContent =
+      data.a_kaynak === 'esp32-3' ? 'ESP32#3' : (data.a_kaynak === 'esp32-1' ? 'ESP32#1 (yedek)' : '--');
+    document.getElementById('metaE3').textContent =
+      (e3Yas === undefined || e3Yas < 0) ? 'veri yok' : (e3Taze ? (e3Yas + ' sn önce') : ('KOPUK (' + e3Yas + ' sn)'));
+
+    hist1 = setFlow('flow1Num','flow1Card','flow1Line', data.debi1 ?? null, hist1);
+    hist2 = setFlow('flow2Num','flow2Card','flow2Line', data.debi2 ?? null, hist2);
+
+    const lps1 = data.debi1_lps;
+    const lps2 = data.debi2_lps;
+    document.getElementById('flow1Lps').textContent =
+      (lps1 !== undefined && lps1 > -900) ? lps1.toFixed(3)+' L/s' : '-- L/s';
+    document.getElementById('flow2Lps').textContent =
+      (lps2 !== undefined && lps2 > -900) ? lps2.toFixed(3)+' L/s' : '-- L/s';
+
+    const now = new Date();
+    document.getElementById('metaTime').textContent =
+      now.toLocaleTimeString('tr-TR');
+
+  }catch(err){
+    document.getElementById('statusDot').classList.add('off');
+    document.getElementById('statusText').textContent = 'bağlantı yok';
+  }
+}
+
+fetchData();
+gecmisVeriCek();
+setInterval(fetchData, POLL_MS);
+setInterval(gecmisVeriCek, 5*60*1000);
+
+/* ══════════════════ VANA KONTROLÜ (invertör AÇ/KAPAT/RESET/izleme) ══════════════════ */
+const heartbeatTimers = {1: null, 2: null};
+const HEARTBEAT_MS = 300;
+const limitState = {1: {gosterildi:false, sonYon:null}, 2: {gosterildi:false, sonYon:null}};
+
+function pathKomut(n)      { return `/osb_depokontrol/kontrol/inv${n}_komut`; }
+function pathKomutZaman(n) { return `/osb_depokontrol/kontrol/inv${n}_komut_zaman`; }
+function pathReset(n)      { return `/osb_depokontrol/kontrol/inv${n}_reset`; }
+function pathDurum(n)      { return `/osb_depokontrol/kontrol/inv${n}_durum`; }
+function pathIzleme(n)     { return `/osb_depokontrol/kontrol/inv${n}_izleme`; }
+function pathHiz(n)        { return `/osb_depokontrol/kontrol/inv${n}_hiz`; }
+
+function komutYaz(n, deger) {
+  const url = `https://${FIREBASE_HOST}${pathKomut(n)}.json?auth=${FIREBASE_AUTH}`;
+  fetch(url, { method:"PUT", headers:{"Content-Type":"application/json"}, body: JSON.stringify(deger) })
+    .then(() => { document.getElementById("connInfo").textContent = "Erikoğlu depo verisi ile çapraz doğrulama yapılmıştır · bağlı — son komut gönderildi · CRT Otomasyon"; })
+    .catch(() => { document.getElementById("connInfo").textContent = "Erikoğlu depo verisi ile çapraz doğrulama yapılmıştır · bağlantı hatası · CRT Otomasyon"; });
+
+  if (deger !== 0) {
+    const zamanUrl = `https://${FIREBASE_HOST}${pathKomutZaman(n)}.json?auth=${FIREBASE_AUTH}`;
+    fetch(zamanUrl, { method:"PUT", headers:{"Content-Type":"application/json"}, body: JSON.stringify({".sv":"timestamp"}) }).catch(()=>{});
+  }
+}
+
+function komutYazGuvenli(n, deger) {
+  const url = `https://${FIREBASE_HOST}${pathKomut(n)}.json?auth=${FIREBASE_AUTH}`;
+  if (navigator.sendBeacon) {
+    const blob = new Blob([JSON.stringify(deger)], { type: "application/json" });
+    navigator.sendBeacon(url, blob);
+  } else {
+    komutYaz(n, deger);
+  }
+}
+
+function posGuncelle(n, durum) {
+  const dot = document.getElementById(`posDot${n}`);
+  const cap = document.getElementById(`posCaption${n}`);
+  dot.classList.remove("opening","closing");
+  if (durum === "ac") { dot.style.left = "82%"; dot.classList.add("opening"); cap.textContent = "açılıyor · temsili gösterge"; }
+  else if (durum === "kapat") { dot.style.left = "18%"; dot.classList.add("closing"); cap.textContent = "kapanıyor · temsili gösterge"; }
+  else { dot.style.left = "50%"; cap.textContent = "beklemede · temsili gösterge"; }
+}
+
+function baslat(n, deger, btn) {
+  komutYaz(n, deger);
+  btn.classList.add("pressed");
+  const chip = document.getElementById(`statusChip${n}`);
+  chip.className = "status-chip run";
+  document.getElementById(`statusVal${n}`).textContent = deger === 1 ? "AÇILIYOR" : "KAPANIYOR";
+  posGuncelle(n, deger === 1 ? "ac" : "kapat");
+  clearInterval(heartbeatTimers[n]);
+  heartbeatTimers[n] = setInterval(() => komutYaz(n, deger), HEARTBEAT_MS);
+}
+function durdur(n, btn) {
+  clearInterval(heartbeatTimers[n]);
+  komutYaz(n, 0);
+  btn.classList.remove("pressed");
+  const chip = document.getElementById(`statusChip${n}`);
+  chip.className = "status-chip idle";
+  document.getElementById(`statusVal${n}`).textContent = "BEKLEMEDE";
+  posGuncelle(n, "bekle");
+}
+function butonKur(n, id, deger) {
+  const btn = document.getElementById(id);
+  const fill = document.getElementById(id + "Fill");
+  const ONAY_SURESI_MS = 1000;
+  let onayTimer = null;
+  let calisiyorMu = false;   // 1sn onay gecti, motor gercekten calismaya basladi mi
+
+  function iptalEt() {
+    if (onayTimer) { clearTimeout(onayTimer); onayTimer = null; }
+    fill.style.transition = "none";
+    fill.style.width = "0%";
+    calisiyorMu = false;
+  }
+  function basildi(e) {
+    e.preventDefault();
+    if (onayTimer || calisiyorMu) return;   // zaten basiliyor/calisiyor, tekrar tetikleme
+    fill.style.transition = `width ${ONAY_SURESI_MS}ms linear`;
+    requestAnimationFrame(() => { fill.style.width = "100%"; });
+    onayTimer = setTimeout(() => {
+      onayTimer = null;
+      calisiyorMu = true;
+      baslat(n, deger, btn);
+    }, ONAY_SURESI_MS);
+  }
+  function birakildi(e) {
+    e.preventDefault();
+    if (calisiyorMu) {
+      // MOTOR CALISIYORSA: tereddutsuz ve gecikmesiz DUR - hicbir onay/gecikme yok
+      durdur(n, btn);
+    }
+    iptalEt();
+  }
+  btn.addEventListener("pointerdown", basildi);
+  btn.addEventListener("pointerup", birakildi);
+  btn.addEventListener("pointerleave", birakildi);
+  btn.addEventListener("pointercancel", birakildi);
+  btn.addEventListener("contextmenu", (e) => e.preventDefault());
+}
+butonKur(1, "btnAc1", 1);
+butonKur(1, "btnKapat1", 2);
+butonKur(2, "btnAc2", 1);
+butonKur(2, "btnKapat2", 2);
+
+const MAX_HZ_INV1 = 18.5;
+const MAX_RPM_INV1 = 500;
+const speedSlider1 = document.getElementById("speedSlider1");
+const speedPct1 = document.getElementById("speedPct1");
+const speedHzRpm1 = document.getElementById("speedHzRpm1");
+const speedApplyRow1 = document.getElementById("speedApplyRow1");
+let speedUygulanan1 = 100;   // en son GERCEKTEN uygulanan (yazilan) deger
+
+function speedOnizlemeGuncelle1(yuzde) {
+  speedPct1.textContent = yuzde;
+  const hz = (yuzde/100*MAX_HZ_INV1).toFixed(1);
+  const rpm = Math.round(yuzde/100*MAX_RPM_INV1);
+  speedHzRpm1.textContent = `(${hz} Hz · ${rpm} rpm)`;
+  speedSlider1.style.setProperty("--fill", yuzde + "%");
+}
+function speedYaz1(yuzde) {
+  const url = `https://${FIREBASE_HOST}${pathHiz(1)}.json?auth=${FIREBASE_AUTH}`;
+  fetch(url, { method:"PUT", headers:{"Content-Type":"application/json"}, body: String(yuzde) }).catch(()=>{});
+}
+speedSlider1.addEventListener("input", () => {
+  const yuzde = parseInt(speedSlider1.value, 10);
+  speedOnizlemeGuncelle1(yuzde);
+  speedApplyRow1.hidden = (yuzde === speedUygulanan1);
+});
+document.getElementById("speedApplyBtn1").addEventListener("click", () => {
+  const yuzde = parseInt(speedSlider1.value, 10);
+  speedYaz1(yuzde);
+  speedUygulanan1 = yuzde;
+  speedApplyRow1.hidden = true;
+});
+document.getElementById("speedRevertBtn1").addEventListener("click", () => {
+  speedSlider1.value = speedUygulanan1;
+  speedOnizlemeGuncelle1(speedUygulanan1);
+  speedApplyRow1.hidden = true;
+});
+
+const MAX_HZ_INV2 = 18.5;
+const MAX_RPM_INV2 = 500;
+const speedSlider2 = document.getElementById("speedSlider2");
+const speedPct2 = document.getElementById("speedPct2");
+const speedHzRpm2 = document.getElementById("speedHzRpm2");
+const speedApplyRow2 = document.getElementById("speedApplyRow2");
+let speedUygulanan2 = 100;
+
+function speedOnizlemeGuncelle2(yuzde) {
+  speedPct2.textContent = yuzde;
+  const hz = (yuzde/100*MAX_HZ_INV2).toFixed(1);
+  const rpm = Math.round(yuzde/100*MAX_RPM_INV2);
+  speedHzRpm2.textContent = `(${hz} Hz · ${rpm} rpm)`;
+  speedSlider2.style.setProperty("--fill", yuzde + "%");
+}
+function speedYaz2(yuzde) {
+  const url = `https://${FIREBASE_HOST}${pathHiz(2)}.json?auth=${FIREBASE_AUTH}`;
+  fetch(url, { method:"PUT", headers:{"Content-Type":"application/json"}, body: String(yuzde) }).catch(()=>{});
+}
+speedSlider2.addEventListener("input", () => {
+  const yuzde = parseInt(speedSlider2.value, 10);
+  speedOnizlemeGuncelle2(yuzde);
+  speedApplyRow2.hidden = (yuzde === speedUygulanan2);
+});
+document.getElementById("speedApplyBtn2").addEventListener("click", () => {
+  const yuzde = parseInt(speedSlider2.value, 10);
+  speedYaz2(yuzde);
+  speedUygulanan2 = yuzde;
+  speedApplyRow2.hidden = true;
+});
+document.getElementById("speedRevertBtn2").addEventListener("click", () => {
+  speedSlider2.value = speedUygulanan2;
+  speedOnizlemeGuncelle2(speedUygulanan2);
+  speedApplyRow2.hidden = true;
+});
+
+/* ══════════════════ HIZ KAYDIRICISI KİLİDİ (kazara dokunmayı önler) ══════════════════ */
+/* Kaydiriciya dogrudan dokunmak calismiyor - once 1 saniye basili tutmak gerekiyor
+   (mavi -> kirmizi renk gecisiyle gorsel geri sayim). 1sn dolunca parmagini KALDIRMANA
+   GEREK KALMADAN ayni dokunusla direkt surukleyip deger degistirebilirsin - bunun icin
+   pointer capture kullanip surukleme pozisyonunu kendimiz hesapliyoruz. */
+const SPEED_KILIT_BASILI_MS = 1000;
+const SPEED_KILIT_ACIK_KALMA_MS = 7000;
+const speedKilitDurum = {
+  1: {basiliTimer:null, acikTimer:null, aktifPointerId:null, surukleniyor:false},
+  2: {basiliTimer:null, acikTimer:null, aktifPointerId:null, surukleniyor:false}
+};
+
+function speedKilitle(n){
+  const st = speedKilitDurum[n];
+  clearTimeout(st.basiliTimer); clearTimeout(st.acikTimer);
+  st.surukleniyor = false;
+  const overlay = document.getElementById(`speedLock${n}`);
+  const fill = document.getElementById(`speedLockFill${n}`);
+  const icon = document.getElementById(`speedLockIcon${n}`);
+  overlay.hidden = false;
+  overlay.classList.remove("holding");
+  fill.style.transition = "none";
+  fill.style.width = "0%";
+  icon.textContent = "🔒 Değiştirmek için basılı tut";
+}
+function speedKilidiAcVeSuruklemeyeBasla(n){
+  const st = speedKilitDurum[n];
+  st.surukleniyor = true;
+  document.getElementById(`speedLock${n}`).hidden = true;   // native slider gorunur olsun
+}
+function speedSuruklemeBitir(n){
+  const st = speedKilitDurum[n];
+  st.surukleniyor = false;
+  st.acikTimer = setTimeout(() => speedKilitle(n), SPEED_KILIT_ACIK_KALMA_MS);
+}
+function speedKilitBasiliBasla(n, pointerId){
+  const st = speedKilitDurum[n];
+  st.aktifPointerId = pointerId;
+  const overlay = document.getElementById(`speedLock${n}`);
+  const fill = document.getElementById(`speedLockFill${n}`);
+  const icon = document.getElementById(`speedLockIcon${n}`);
+  overlay.classList.add("holding");
+  icon.textContent = "Bırakma…";
+  fill.style.transition = `width ${SPEED_KILIT_BASILI_MS}ms linear`;
+  requestAnimationFrame(() => { fill.style.width = "100%"; });
+  st.basiliTimer = setTimeout(() => speedKilidiAcVeSuruklemeyeBasla(n), SPEED_KILIT_BASILI_MS);
+}
+function speedKilitBasiliIptal(n){
+  const st = speedKilitDurum[n];
+  if(st.basiliTimer){ clearTimeout(st.basiliTimer); st.basiliTimer = null; speedKilitle(n); }
+}
+function speedDegeriPointerdanHesapla(sliderEl, clientX){
+  const rect = sliderEl.getBoundingClientRect();
+  let oran = (clientX - rect.left) / rect.width;
+  oran = Math.max(0, Math.min(1, oran));
+  return Math.round(oran * 100);
+}
+function speedSuruklemeGuncelle(n, clientX){
+  const slider = document.getElementById(`speedSlider${n}`);
+  const yuzde = speedDegeriPointerdanHesapla(slider, clientX);
+  slider.value = yuzde;
+  (n===1 ? speedOnizlemeGuncelle1 : speedOnizlemeGuncelle2)(yuzde);
+  const applyRow = document.getElementById(`speedApplyRow${n}`);
+  const uygulanan = (n===1 ? speedUygulanan1 : speedUygulanan2);
+  applyRow.hidden = (yuzde === uygulanan);
+}
+[1, 2].forEach(n => {
+  const overlay = document.getElementById(`speedLock${n}`);
+  overlay.addEventListener("pointerdown", (e) => {
+    e.preventDefault();
+    overlay.setPointerCapture(e.pointerId);
+    speedKilitBasiliBasla(n, e.pointerId);
+  });
+  overlay.addEventListener("pointermove", (e) => {
+    const st = speedKilitDurum[n];
+    if (st.surukleniyor && e.pointerId === st.aktifPointerId) {
+      speedSuruklemeGuncelle(n, e.clientX);
+    }
+  });
+  overlay.addEventListener("pointerup", (e) => {
+    const st = speedKilitDurum[n];
+    if (st.surukleniyor) speedSuruklemeBitir(n);
+    else speedKilitBasiliIptal(n);
+  });
+  overlay.addEventListener("pointercancel", () => {
+    const st = speedKilitDurum[n];
+    if (st.surukleniyor) speedSuruklemeBitir(n);
+    else speedKilitBasiliIptal(n);
+  });
+  overlay.addEventListener("contextmenu", (e) => e.preventDefault());
+});
+// Uygula / Geri Al basilinca kaydirici hemen tekrar kilitlensin (guvenlik icin bekletmeye gerek yok)
+document.getElementById("speedApplyBtn1").addEventListener("click", () => speedKilitle(1));
+document.getElementById("speedRevertBtn1").addEventListener("click", () => speedKilitle(1));
+document.getElementById("speedApplyBtn2").addEventListener("click", () => speedKilitle(2));
+document.getElementById("speedRevertBtn2").addEventListener("click", () => speedKilitle(2));
+speedKilitle(1);
+speedKilitle(2);
+
+function limitBildirimGoster(n, yon) {
+  const notice = document.getElementById(`limitNotice${n}`);
+  const title = document.getElementById(`limitNoticeTitle${n}`);
+  const desc = document.getElementById(`limitNoticeDesc${n}`);
+  notice.classList.remove("ac","kapat");
+  notice.classList.add(yon, "show");
+  if (yon === "ac") {
+    title.textContent = "Açma limitinin sonuna geldin";
+    desc.textContent = "Vana muhtemelen tam açık. Motor otomatik durduruldu (akım tabanlı tahmin — gerçek limit switch değil).";
+  } else {
+    title.textContent = "Kapama limitinin sonuna geldin";
+    desc.textContent = "Vana muhtemelen tam kapalı. Motor otomatik durduruldu (akım tabanlı tahmin — gerçek limit switch değil).";
+  }
+}
+[1, 2].forEach(n => {
+  document.getElementById(`limitNoticeClose${n}`).addEventListener("click", () => {
+    document.getElementById(`limitNotice${n}`).classList.remove("show");
+    limitState[n].gosterildi = false;
+  });
+});
+
+[1, 2].forEach(n => {
+  const btn = document.getElementById(`btnReset${n}`);
+  btn.addEventListener("click", async () => {
+    btn.disabled = true;
+    btn.innerHTML = '<span class="spin">🔄</span> sıfırlanıyor…';
+    try {
+      const url = `https://${FIREBASE_HOST}${pathReset(n)}.json?auth=${FIREBASE_AUTH}`;
+      await fetch(url, { method:"PUT", headers:{"Content-Type":"application/json"}, body: "1" });
+    } catch (e) {}
+    setTimeout(() => { btn.disabled = false; btn.innerHTML = "🔄 İnvertörü Fiziksel Sıfırla (RES)"; }, 3000);
+  });
+});
+
+async function durumOku(n) {
+  try {
+    const url = `https://${FIREBASE_HOST}${pathDurum(n)}.json?auth=${FIREBASE_AUTH}`;
+    const res = await fetch(url);
+    const val = await res.json();
+    const chip = document.getElementById(`modbusChip${n}`);
+    const v = document.getElementById(`modbusVal${n}`);
+    if (val === "HATA") { chip.className = "status-chip err"; v.textContent = "HATA"; }
+    else if (val === "OK") { chip.className = "status-chip ok"; v.textContent = "NORMAL"; }
+    else { chip.className = "status-chip idle"; v.textContent = "BİLİNMİYOR"; }
+  } catch (e) {
+    document.getElementById(`modbusVal${n}`).textContent = "OKUNAMADI";
+  }
+}
+
+let sonBayatDurumlari = {1: true, 2: true};
+function ustGostergeyiGuncelle() {
+  const herIkisiDeBayat = sonBayatDurumlari[1] && sonBayatDurumlari[2];
+  const dotEl = document.getElementById("liveDot");
+  const textEl = document.getElementById("liveText");
+  dotEl.classList.toggle("off", herIkisiDeBayat);
+  textEl.textContent = herIkisiDeBayat ? "bayat" : "canlı";
+}
+
+async function metrikOku(n) {
+  try {
+    const url = `https://${FIREBASE_HOST}${pathIzleme(n)}.json?auth=${FIREBASE_AUTH}`;
+    const res = await fetch(url);
+    const val = await res.json();
+    if (!val) return;
+
+    const simdi = Date.now();
+    const guncellemeMs = val.son_guncelleme || 0;
+    const farkSaniye = guncellemeMs ? Math.round((simdi - guncellemeMs) / 1000) : null;
+    const bayat = (farkSaniye === null) || (farkSaniye > 8);
+    sonBayatDurumlari[n] = bayat;
+    ustGostergeyiGuncelle();
+
+    document.getElementById(`bayatBanner${n}`).hidden = !bayat;
+    if (farkSaniye !== null) document.getElementById(`bayatSaniye${n}`).textContent = farkSaniye;
+
+    ["mFreq","mAmp","mVolt","mRpm"].forEach(id => document.getElementById(`${id}${n}`).classList.toggle("stale", bayat));
+
+    document.getElementById(`mFreq${n}`).innerHTML = (val.frekans_hz ?? "—") + ' <span class="unit">Hz</span>';
+    document.getElementById(`mAmp${n}`).innerHTML  = (val.akim_a ?? "—") + ' <span class="unit">A</span>';
+    document.getElementById(`mVolt${n}`).innerHTML = (val.gerilim_v ?? "—") + ' <span class="unit">V</span>';
+    document.getElementById(`mRpm${n}`).innerHTML  = (val.rpm !== undefined ? Math.round(val.rpm) : "—") + ' <span class="unit">rpm</span>';
+
+    document.getElementById(`asiriAkimBanner${n}`).hidden = !(val.asiri_akim && !bayat && val.limit_yonu === "yok");
+
+    if (val.asiri_akim && !bayat && (val.limit_yonu === "ac" || val.limit_yonu === "kapat")) {
+      if (!limitState[n].gosterildi || limitState[n].sonYon !== val.limit_yonu) {
+        limitState[n].gosterildi = true;
+        limitState[n].sonYon = val.limit_yonu;
+        limitBildirimGoster(n, val.limit_yonu);
+      }
+    }
+    document.getElementById(`arizaBanner${n}`).hidden = !(val.muhtemel_ariza && !bayat);
+  } catch (e) {}
+}
+
+[1, 2].forEach(n => {
+  durumOku(n);
+  metrikOku(n);
+  setInterval(() => durumOku(n), 2000);
+  setInterval(() => metrikOku(n), 2000);
+});
+
+document.addEventListener("visibilitychange", () => {
+  if (document.hidden) {
+    [1, 2].forEach(n => { clearInterval(heartbeatTimers[n]); komutYazGuvenli(n, 0); });
+  }
+});
+window.addEventListener("beforeunload", () => { [1, 2].forEach(n => komutYazGuvenli(n, 0)); });
+window.addEventListener("pagehide", () => { [1, 2].forEach(n => komutYazGuvenli(n, 0)); });
+/* ══════════════════ BİLDİRİM TESTİ (ntfy) ══════════════════ */
+const NTFY_URL = "https://zil.afoio.com/su";
+const NTFY_USER = "osb";
+const NTFY_PASS = "..Osb..12";
+
+document.getElementById("btnNtfyTest").addEventListener("click", async () => {
+  const btn = document.getElementById("btnNtfyTest");
+  const sonuc = document.getElementById("ntfyTestSonuc");
+  btn.disabled = true;
+  btn.textContent = "Gönderiliyor…";
+  sonuc.textContent = "";
+  sonuc.style.color = "var(--text-dim)";
+
+  const simdi = new Date().toLocaleString("tr-TR");
+  try {
+    const res = await fetch(NTFY_URL, {
+      method: "POST",
+      headers: {
+        "Authorization": "Basic " + btoa(NTFY_USER + ":" + NTFY_PASS),
+        "Title": "OSB Depokontrol - Test",
+        "Priority": "default"
+      },
+      body: `Test bildirimi - arayüzden gönderildi (${simdi})`
+    });
+    if (res.ok) {
+      sonuc.textContent = "✅ Gönderildi (HTTP " + res.status + ") — telefonunu kontrol et.";
+      sonuc.style.color = "#3fd7a0";
+    } else {
+      sonuc.textContent = "⚠ Sunucu hata döndürdü (HTTP " + res.status + ") — kullanıcı adı/şifreyi kontrol et.";
+      sonuc.style.color = "#ff8080";
+    }
+  } catch (e) {
+    sonuc.textContent = "❌ Gönderilemedi — muhtemelen ağ/CORS engeli (tarayıcı konsoluna bak: F12).";
+    sonuc.style.color = "#ff8080";
+  } finally {
+    btn.disabled = false;
+    btn.textContent = "🔔 Test Bildirimi Gönder";
+  }
+});
+</script>
+</body>
+</html>
